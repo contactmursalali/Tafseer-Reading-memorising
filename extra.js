@@ -536,16 +536,41 @@ if(H.D)hook();
     $('#recResult').innerHTML=html;$('#recResult').onclick=e=>{const b=e.target.closest('[data-go]');if(b)H.go(+b.dataset.go)};$('#recStatus').textContent='Test complete. Review weak ayahs and retest them.';$('#recLiveState').textContent='Complete';
   };
   const openRecitation=()=>{const d=recEnsure();d.showModal();recPrepare($('#recSource')?.value||'page')};
+  const tafsirSlugs = [
+    ['ur-maarif-ul-quran', "Ma'ariful Quran — Urdu"],
+    ['en-tafsir-maarif-ul-quran', "Maarif-ul-Quran — English"],
+    ['ur-tafseer-ibn-e-kaseer', 'Tafsir Ibn Kathir — Urdu'],
+    ['en-tafisr-ibn-kathir', 'Tafsir Ibn Kathir — English'],
+    ['en-muhammad-asad', 'The Message of the Quran — English'],
+    ['urd-aminahsaniislahi', 'Tadabbur-e-Quran — Urdu']
+  ];
+  const ensureTafsirDialog=()=>{
+    let d=$('#tafsirDlg'); if(d)return d;
+    d=document.createElement('dialog');d.id='tafsirDlg';
+    d.innerHTML=`<h2>Quran Tafsir</h2><p>Choose a Surah, Ayah, commentary and language. Commentary loads from the selected public data source when available.</p><div class="row"><label>Surah <input id="tfSurah" type="number" min="1" max="114" value="1" style="width:85px"></label><label>Ayah <input id="tfAyah" type="number" min="1" max="286" value="1" style="width:85px"></label></div><div class="row"><label style="flex:1">Commentary <select id="tfEdition" style="width:100%"></select></label></div><p id="tfStatus" role="status"></p><article id="tfText" style="white-space:pre-wrap;line-height:1.8;max-height:45vh;overflow:auto"></article><div class="row"><button id="tfLoad">Load Tafsir</button><button id="tfClose">Close</button></div>`;
+    document.body.appendChild(d);const sel=$('#tfEdition');tafsirSlugs.forEach(([slug,label])=>{const o=document.createElement('option');o.value=slug;o.textContent=label;sel.appendChild(o)});
+    $('#tfClose').onclick=()=>d.close();$('#tfLoad').onclick=loadTafsir;return d;
+  };
+  const loadTafsir=async()=>{
+    const surah=Number($('#tfSurah').value),ayah=Number($('#tfAyah').value),edition=$('#tfEdition').value;
+    if(!Number.isInteger(surah)||surah<1||surah>114||!Number.isInteger(ayah)||ayah<1||ayah>286){$('#tfStatus').textContent='Enter a valid Surah (1–114) and Ayah number.';return;}
+    $('#tfStatus').textContent='Loading commentary…';$('#tfText').textContent='';
+    const urls=[`https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/editions/${edition}/${surah}/${ayah}.json`,`https://raw.githubusercontent.com/spa5k/tafsir_api/main/tafsir/editions/${edition}/${surah}/${ayah}.json`];
+    for(const url of urls){try{const res=await fetch(url);if(!res.ok)continue;const data=await res.json();const textValue=(v)=>typeof v==='string'?v:(v&&typeof v==='object'?Object.values(v).find(x=>typeof x==='string'&&x.trim()):'');let found=textValue(data.text)||textValue(data.tafsir)||textValue(data.translation)||textValue(data.data?.text)||textValue(data.data?.tafsir)||textValue(data.data);if(!found&&Array.isArray(data))found=textValue(data[0]?.text)||textValue(data[0]?.tafsir);if(found){$('#tfText').textContent=found;$('#tfStatus').textContent=`Surah ${surah}, Ayah ${ayah} · ${$('#tfEdition').selectedOptions[0].textContent}`;return;}}
+      catch(e){}
+    }
+    $('#tfStatus').textContent='This edition/endpoint did not return a readable Ayah record. Check the edition slug or try another commentary. The app has not substituted unverified text.';
+  };
   const addToolbarButtons=()=>{const bar=document.querySelector('.ctl');if(!bar)return;let tools=$('#toolsBtn');let menu=$('#toolsMenu');if(!tools){tools=document.createElement('button');tools.id='toolsBtn';tools.textContent='Tools';tools.setAttribute('aria-expanded','false');bar.appendChild(tools);menu=document.createElement('div');menu.id='toolsMenu';menu.className='tools-menu';document.body.appendChild(menu);tools.onclick=e=>{e.stopPropagation();const on=menu.classList.toggle('on');tools.setAttribute('aria-expanded',String(on))};document.addEventListener('click',e=>{if(!e.target.closest('#toolsMenu,#toolsBtn')){menu.classList.remove('on');tools.setAttribute('aria-expanded','false')}})}
     const add=(id,label,fn)=>{if($('#'+id))return;const b=document.createElement('button');b.id=id;b.textContent=label;b.onclick=()=>{menu.classList.remove('on');tools.setAttribute('aria-expanded','false');fn()};menu.appendChild(b)};
-    add('mark-bookmark','Bookmark',()=>activateMode('bookmark'));add('mark-notes','Notes',()=>activateMode('notes'));add('mark-theme','Theme',()=>activateMode('theme'));add('mark-recite','Recite',openRecitation);add('myMarks','My Marks',()=>openMarks('bookmarks'));add('progress','Progress',()=>window.openHifzProgress());add('qsearch','Search',()=>{ensureSearchDialog();$('#sq').value='';$('#sstatus').textContent='';$('#sresults').innerHTML='';$('#searchDlg').showModal();setTimeout(()=>$('#sq').focus(),0)});add('full','Full page',toggleFull);
+    add('mark-bookmark','Bookmark',()=>activateMode('bookmark'));add('mark-notes','Notes',()=>activateMode('notes'));add('mark-theme','Theme',()=>activateMode('theme'));add('tafsir','Tafsir',()=>{ensureTafsirDialog().showModal();});add('myMarks','My Marks',()=>openMarks('bookmarks'));add('progress','Progress',()=>window.openHifzProgress());add('full','Full page',toggleFull);
     if(!$('#planTool'))add('planTool','Plan',()=>window.openHifzPlan());
   };
   const ensureFullMeta=()=>{let m=$('#fullMeta');if(!m){m=document.createElement('div');m.id='fullMeta';m.className='full-meta';document.body.appendChild(m)}const p=H.page||1;let si=0;H.D.surahPage.forEach((sp,i)=>{if(sp<=p)si=i});let ji=0;H.D.juzPage.forEach((jp,i)=>{if(jp<=p)ji=i});let first=null;const pg=H.D.pages[p-1]||[];for(const l of pg){if(l[0]===0&&l[3]){first=l[3].split(':').map(Number);break}}let ruku='';if(first&&window.R){const [s,a]=first;let bestA=0,bestN='';Object.keys(window.R).forEach(k=>{const [rs,ra]=k.split(':').map(Number);if(rs===s&&ra<=a&&ra>=bestA){bestA=ra;bestN=window.R[k]}});if(bestN)ruku='Ruku '+bestN}m.innerHTML=`<b>Juz ${ji+1}</b><span class="sep">·</span><b>${esc(H.D.surahs[si]||'')}</b><span class="sep">·</span>Page ${p}<span class="sep">·</span>${ruku||'Ruku —'}`;m.style.display=H.S.full?'flex':'none';return m};
   const ensureFullExit=()=>{let b=$('#fullExit');if(!b){b=document.createElement('button');b.id='fullExit';b.className='full-exit';b.type='button';b.setAttribute('aria-label','Exit full page');b.title='Exit full page';b.innerHTML='<span aria-hidden="true">×</span>';b.onclick=()=>setFull(false);document.body.appendChild(b)}b.style.display=S().full?'flex':'none';return b};
   const setFull=on=>{S().full=!!on;H.save();document.body.classList.toggle('full-reader',S().full);const b=$('#full');if(b)b.setAttribute('aria-pressed',String(S().full));ensureFullExit();ensureFullMeta();if(H.render)H.render();ensureFullExit();ensureFullMeta();if(S().full)window.scrollTo(0,0)};const toggleFull=()=>setFull(!S().full);const fullOnLoad=()=>{document.body.classList.toggle('full-reader',!!S().full);const b=$('#full');if(b)b.setAttribute('aria-pressed',String(!!S().full));ensureFullExit();ensureFullMeta()};
   document.addEventListener('click',e=>{if(!markMode)return;if(e.target.closest('dialog,button,input,select,textarea,a'))return;const w=e.target.closest('.w[data-v]');if(!w)return;e.preventDefault();e.stopImmediatePropagation();selectAyah(w.dataset.v)},true);
-  document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='/'){e.preventDefault();$('#qsearch')?.click()}if(e.key==='Escape'&&S().full){e.preventDefault();setFull(false);return}if(e.key.toLowerCase()==='f')$('#full')?.click()});
+  document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='Escape'&&S().full){e.preventDefault();setFull(false);return}if(e.key.toLowerCase()==='f')$('#full')?.click()});
   let ftaps=0,ftimer=null;document.addEventListener('click',e=>{if(!S().full||e.clientX>70||e.clientY>70)return;ftaps++;clearTimeout(ftimer);ftimer=setTimeout(()=>ftaps=0,900);if(ftaps>=3){ftaps=0;setFull(false)}},{passive:true});
   const boot=()=>{if(!window.H||!H.D){setTimeout(boot,100);return}markMode=null;addToolbarButtons();activateMode(null);fullOnLoad();const oldRender=H.render;H.render=function(){oldRender();addToolbarButtons();applyAyahMarks();fullOnLoad()};applyAyahMarks()};boot();
 })();

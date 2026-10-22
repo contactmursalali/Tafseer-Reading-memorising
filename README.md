@@ -1,28 +1,19 @@
-# Hifz Android App
+# Hifz — Web App
 
-This repository packages the Hifz 16-line Mushaf web application as an Android app using a native WebView.
+A web-first 16-line Indo-Pak Mushaf memorization app. Android/Gradle build files have been removed.
 
-## Build the APK
+## Run locally
 
-### Android Studio
-1. Open this folder in Android Studio.
-2. Let Gradle sync/download Android dependencies.
-3. Run **Build > Build APK(s)**.
-4. The debug APK is produced at:
-   `app/build/outputs/apk/debug/app-debug.apk`
+Serve this directory with any static HTTP server (for example `python -m http.server 8000`) and open `http://localhost:8000`. Using a server is recommended because the app loads local JSON files.
 
-### GitHub Actions
-Push the repository to GitHub. The included workflow builds `app-debug.apk` automatically. You can also start it manually from **Actions > Build Hifz APK > Run workflow**.
+## Deploy
 
-## What was fixed
+Upload the contents of this folder to your GitHub repository and enable GitHub Pages for the appropriate branch/folder.
 
-- Replaced the placeholder Hello World Android activity with the actual Hifz web app.
-- Bundled the Mushaf JSON, meanings, mutashabihat data, Ruku/Rub data, font, icons, and JavaScript into Android assets.
-- Enabled JavaScript, DOM storage, local asset access, and online audio.
-- Added Android file-picker support for restoring JSON backups.
-- Added a native Android Save Document flow for downloading Hifz backups.
-- Added microphone permission handling for the Hifz Recitation Test.
-- Set the app name and launcher icon to Hifz.
-- Added the Internet permission for Sheikh Saud ash-Shuraym audio and speech-recognition functionality.
+## Tafsir
 
-The app's normal progress data remains in WebView local storage on the device.
+The Tools menu includes an initial Ayah-by-Ayah Tafsir lookup for selected Urdu and English editions. It requests public JSON records from the spa5k/tafsir_api repository at runtime. It does not bundle the complete Tafsir corpora locally; internet access is required. Edition identifiers and returned JSON formats may change, so verify each edition before relying on it. Missing records are reported rather than replaced with invented commentary.
+
+## Data and attribution
+
+Existing Quran/Mushaf, font, meanings, mutashabihat, rub and ruku data are retained from the supplied project. Review each source's license and attribution requirements before public distribution. The Darussalam screenshot is a visual reference; the current page text/layout data has not been converted into a verified facsimile of that specific printed edition.
